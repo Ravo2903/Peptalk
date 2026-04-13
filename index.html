@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Peptalk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #F5F2EC;
+      --bg2:       #EDE9E0;
+      --bg3:       #E3DDD2;
+      --ink:       #1C1917;
+      --ink2:      #57534E;
+      --ink3:      #A8A29E;
+      --line:      rgba(28,25,23,0.12);
+      --green:     #2D6A4F;
+      --green-bg:  #D8F0E5;
+      --purple:    #4C3D8F;
+      --purple-bg: #E8E4F8;
+      --amber:     #92400E;
+      --amber-bg:  #FEF3C7;
+      --radius:    12px;
+      --radius-sm: 20px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* header */
+    .site-header {
+      margin-bottom: 48px;
+    }
+    .site-title {
+      font-family: 'Lora', serif;
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+    .site-title em {
+      font-style: italic;
+      color: var(--purple);
+    }
+    .site-sub {
+      margin-top: 6px;
+      font-size: 14px;
+      color: var(--ink3);
+      font-weight: 300;
+    }
+
+    /* mode toggle */
+    .mode-toggle {
+      display: flex;
+      background: var(--bg2);
+      border-radius: 30px;
+      padding: 3px;
+      width: fit-content;
+      margin-bottom: 36px;
+      border: 1px solid var(--line);
+    }
+    .mode-btn {
+      padding: 8px 20px;
+      border-radius: 26px;
+      border: none;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--ink3);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .mode-btn.active {
+      background: var(--bg);
+      color: var(--ink);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    /* question */
+    .question {
+      font-family: 'Lora', serif;
+      font-size: 20px;
+      font-weight: 400;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+    .question-sub {
+      font-size: 13px;
+      color: var(--ink3);
+      margin-bottom: 20px;
+      font-weight: 300;
+    }
+
+    /* legend */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--ink3);
+      font-weight: 300;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    /* word cloud */
+    .cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 7px 15px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 300;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      border: 1px solid transparent;
+      user-select: none;
+      letter-spacing: 0.01em;
+    }
+
+    .chip.energy       { background: #E8F5EE; border-color: #A7D9BF; color: #1A5C3A; }
+    .chip.mood         { background: #EEEAF8; border-color: #C4B8EB; color: #3B2F7A; }
+    .chip.drive        { background: #FEF3E2; border-color: #F7D598; color: #7A4D0D; }
+    .chip.clarity      { background: #E8F1FB; border-color: #A8C8EE; color: #1A4A7A; }
+    .chip.inner        { background: #FCEDE8; border-color: #F0B8A0; color: #6B2510; }
+    .chip.social       { background: #FAEEF4; border-color: #EBB5CF; color: #6B1A3A; }
+    .chip.pos-energy   { background: #E8F5EE; border-color: #A7D9BF; color: #1A5C3A; }
+    .chip.pos-flow     { background: #E8F1FB; border-color: #A8C8EE; color: #1A4A7A; }
+    .chip.pos-mood     { background: #FEF3E2; border-color: #F7D598; color: #7A4D0D; }
+    .chip.pos-body     { background: #EEF5E4; border-color: #BADA92; color: #2D5010; }
+    .chip.pos-meaning  { background: #EEEAF8; border-color: #C4B8EB; color: #3B2F7A; }
+    .chip.pos-connect  { background: #FAEEF4; border-color: #EBB5CF; color: #6B1A3A; }
+
+    .chip.selected {
+      transform: scale(0.96);
+      font-weight: 400;
+    }
+    .chip.selected.energy,.chip.selected.pos-energy   { background: #1A5C3A; border-color: #1A5C3A; color: #D8F0E5; }
+    .chip.selected.mood,.chip.selected.pos-meaning    { background: #3B2F7A; border-color: #3B2F7A; color: #E8E4F8; }
+    .chip.selected.drive,.chip.selected.pos-mood      { background: #7A4D0D; border-color: #7A4D0D; color: #FEF3E2; }
+    .chip.selected.clarity,.chip.selected.pos-flow    { background: #1A4A7A; border-color: #1A4A7A; color: #DCEAF8; }
+    .chip.selected.inner                              { background: #6B2510; border-color: #6B2510; color: #FCEDE8; }
+    .chip.selected.social,.chip.selected.pos-connect  { background: #6B1A3A; border-color: #6B1A3A; color: #FAEEF4; }
+    .chip.selected.pos-body                           { background: #2D5010; border-color: #2D5010; color: #EEF5E4; }
+
+    /* free text */
+    .free-label {
+      font-size: 11px;
+      color: var(--ink3);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-weight: 400;
+    }
+    textarea {
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 300;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--ink);
+      resize: none;
+      line-height: 1.6;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    textarea:focus { border-color: rgba(28,25,23,0.3); }
+    textarea::placeholder { color: var(--ink3); }
+
+    /* button */
+    .gen-wrap {
+      margin-top: 28px;
+      text-align: center;
+    }
+    .gen-btn {
+      font-family: 'Lora', serif;
+      font-size: 16px;
+      font-style: italic;
+      padding: 13px 36px;
+      border-radius: 30px;
+      border: 1px solid rgba(28,25,23,0.25);
+      background: var(--ink);
+      color: var(--bg);
+      cursor: pointer;
+      transition: all 0.18s;
+      letter-spacing: 0.01em;
+    }
+    .gen-btn:hover { background: #2C2420; }
+    .gen-btn:active { transform: scale(0.98); }
+    .gen-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--ink3);
+      font-weight: 300;
+    }
+
+    /* divider */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 40px 0;
+    }
+
+    /* result */
+    .result-label {
+      font-size: 11px;
+      color: var(--ink3);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      font-weight: 400;
+    }
+    .result-card {
+      background: var(--bg2);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      margin-bottom: 12px;
+      border-left: 2px solid transparent;
+      animation: fadeUp 0.4s ease both;
+    }
+    .result-card:nth-child(2) { animation-delay: 0.08s; }
+    .result-card:nth-child(3) { animation-delay: 0.16s; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .result-card.grounding, .result-card.amplify { border-left-color: var(--green); }
+    .result-card.reframe,   .result-card.reflect  { border-left-color: var(--purple); }
+    .result-card.action,    .result-card.momentum { border-left-color: var(--amber); }
+
+    .card-type {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .card-type.grounding, .card-type.amplify { color: var(--green); }
+    .card-type.reframe,   .card-type.reflect  { color: var(--purple); }
+    .card-type.action,    .card-type.momentum { color: var(--amber); }
+
+    .card-body {
+      font-family: 'Lora', serif;
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.7;
+      color: var(--ink);
+    }
+
+    /* loading */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 24px 0;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--ink3);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%,80%,100%{opacity:0.25} 40%{opacity:0.8} }
+
+    .reset-btn {
+      background: none; border: none;
+      color: var(--ink3); font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; padding: 0;
+      margin-top: 12px;
+      font-weight: 300;
+    }
+    .reset-btn:hover { color: var(--ink2); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div class="site-title">pep<em>talk</em></div>
+    <div class="site-sub">ta en pause. kjenn etter. kom videre.</div>
+  </header>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btn-low" onclick="setMode('low')">Jeg trenger støtte</button>
+    <button class="mode-btn" id="btn-high" onclick="setMode('high')">Jeg vil bygge videre</button>
+  </div>
+
+  <p class="question" id="headline"></p>
+  <p class="question-sub" id="subline"></p>
+
+  <div class="legend" id="legend"></div>
+  <div class="cloud" id="cloud"></div>
+
+  <div>
+    <p class="free-label">eller beskriv det med egne ord</p>
+    <textarea id="custom-input" rows="2" placeholder=""></textarea>
+  </div>
+
+  <div class="gen-wrap">
+    <button class="gen-btn" id="gen-btn" onclick="generate()" disabled></button>
+    <p class="hint" id="hint">Velg minst ett ord, eller skriv noe</p>
+  </div>
+
+  <hr class="divider" id="divider" style="display:none;">
+
+  <div id="result-area" style="display:none;">
+    <p class="result-label" id="result-label"></p>
+    <div id="result-content"></div>
+    <button class="reset-btn" onclick="reset()">← Start på nytt</button>
+  </div>
+
+</div>
+
+<script>
+const lowWords = [
+  {label:"utmattet",group:"energy"},{label:"lav energi",group:"energy"},{label:"utbrent",group:"energy"},
+  {label:"engstelig",group:"mood"},{label:"trist",group:"mood"},{label:"irritabel",group:"mood"},
+  {label:"nummen",group:"mood"},{label:"urolig",group:"mood"},{label:"tung",group:"mood"},
+  {label:"umotivert",group:"drive"},{label:"fastlåst",group:"drive"},{label:"handlingslammet",group:"drive"},
+  {label:"tåkete",group:"clarity"},{label:"spredt",group:"clarity"},{label:"usikker",group:"clarity"},{label:"overveldet",group:"clarity"},
+  {label:"selvkritisk",group:"inner"},{label:"ikke god nok",group:"inner"},
+  {label:"ensom",group:"social"},{label:"frakoblet",group:"social"},
+];
+const highWords = [
+  {label:"energisk",group:"pos-energy"},{label:"uthvilt",group:"pos-energy"},
+  {label:"i flytsonen",group:"pos-flow"},{label:"fokusert",group:"pos-flow"},{label:"inspirert",group:"pos-flow"},{label:"modig",group:"pos-flow"},{label:"klar",group:"pos-flow"},
+  {label:"glad",group:"pos-mood"},{label:"takknemlig",group:"pos-mood"},{label:"lettere",group:"pos-mood"},
+  {label:"tilstede",group:"pos-body"},{label:"i kroppen",group:"pos-body"},
+  {label:"knyttet til noe",group:"pos-meaning"},{label:"meningsfull dag",group:"pos-meaning"},{label:"kreativ",group:"pos-meaning"},{label:"nysgjerrig",group:"pos-meaning"},
+  {label:"koblet til andre",group:"pos-connect"},{label:"sett",group:"pos-connect"},
+];
+const lowLegend  = [{color:"#2D6A4F",label:"energi"},{color:"#4C3D8F",label:"humør"},{color:"#92400E",label:"driv"},{color:"#1A4A7A",label:"klarhet"},{color:"#6B2510",label:"indre stemme"},{color:"#6B1A3A",label:"tilknytning"}];
+const highLegend = [{color:"#2D6A4F",label:"energi"},{color:"#1A4A7A",label:"flyt"},{color:"#92400E",label:"humør"},{color:"#2D5010",label:"kropp"},{color:"#4C3D8F",label:"mening"},{color:"#6B1A3A",label:"tilknytning"}];
+
+let mode = 'low';
+const selected = new Set();
+
+function setMode(m) {
+  if (mode === m) return;
+  mode = m; selected.clear();
+  document.getElementById('custom-input').value = '';
+  document.getElementById('divider').style.display = 'none';
+  document.getElementById('result-area').style.display = 'none';
+  document.getElementById('btn-low').className  = 'mode-btn' + (m === 'low'  ? ' active' : '');
+  document.getElementById('btn-high').className = 'mode-btn' + (m === 'high' ? ' active' : '');
+  render();
+}
+
+function render() {
+  const isLow = mode === 'low';
+  document.getElementById('headline').textContent   = isLow ? 'Hvordan har du det akkurat nå?' : 'Hva kjenner du på akkurat nå?';
+  document.getElementById('subline').textContent    = isLow ? 'Velg alt som kjennes riktig. Du trenger ikke forklare noe.' : 'Velg det som treffer. Vi hjelper deg ta vare på det.';
+  document.getElementById('custom-input').placeholder = isLow ? 'f.eks. «Jeg føler meg fastlåst og vet ikke hvor jeg skal begynne...»' : 'f.eks. «Jeg har hatt en god dag og vil holde fast på det...»';
+  document.getElementById('gen-btn').textContent    = isLow ? 'Gi meg en peptalk' : 'Bygg videre på dette';
+  document.getElementById('result-label').textContent = isLow ? 'din peptalk' : 'bygg videre';
+
+  const legend = document.getElementById('legend');
+  legend.innerHTML = (isLow ? lowLegend : highLegend).map(i =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${i.color}"></div>${i.label}</div>`
+  ).join('');
+
+  const cloud = document.getElementById('cloud');
+  cloud.innerHTML = '';
+  (isLow ? lowWords : highWords).forEach(w => {
+    const c = document.createElement('span');
+    c.className = `chip ${w.group}`;
+    c.textContent = w.label;
+    c.onclick = () => {
+      c.classList.toggle('selected');
+      selected.has(w.label) ? selected.delete(w.label) : selected.add(w.label);
+      updateBtn();
+    };
+    cloud.appendChild(c);
+  });
+  updateBtn();
+}
+
+function updateBtn() {
+  document.getElementById('gen-btn').disabled =
+    !(selected.size > 0 || document.getElementById('custom-input').value.trim().length > 2);
+}
+document.getElementById('custom-input').addEventListener('input', updateBtn);
+
+function reset() {
+  selected.clear();
+  document.querySelectorAll('.chip.selected').forEach(c => c.classList.remove('selected'));
+  document.getElementById('custom-input').value = '';
+  document.getElementById('divider').style.display = 'none';
+  document.getElementById('result-area').style.display = 'none';
+  updateBtn();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+async function generate() {
+  const chips = Array.from(selected);
+  const custom = document.getElementById('custom-input').value.trim();
+  const description = chips.length > 0
+    ? chips.join(', ') + (custom ? '. De skrev også: ' + custom : '')
+    : custom;
+
+  document.getElementById('gen-btn').disabled = true;
+  document.getElementById('divider').style.display = 'block';
+  document.getElementById('result-area').style.display = 'block';
+  document.getElementById('result-content').innerHTML = `<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+
+  try {
+    const res = await fetch('/api/pep', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, description }),
+    });
+    const parsed = await res.json();
+    if (parsed.error) throw new Error(parsed.error);
+
+    const isLow = mode === 'low';
+    const keys   = isLow ? ['grounding','reframe','action']      : ['reflect','amplify','momentum'];
+    const labels = isLow
+      ? {grounding:'Forankre deg', reframe:'Et annet blikk', action:'Ett lite steg'}
+      : {reflect:'Legg merke til det', amplify:'Forankre det gode', momentum:'Ri på bølgen'};
+
+    document.getElementById('result-content').innerHTML = keys.map(k =>
+      `<div class="result-card ${k}"><div class="card-type ${k}">${labels[k]}</div><div class="card-body">${parsed[k]}</div></div>`
+    ).join('');
+
+    document.getElementById('result-area').scrollIntoView({behavior:'smooth', block:'start'});
+  } catch(e) {
+    document.getElementById('result-content').innerHTML =
+      `<p style="color:#A8A29E;font-size:14px;font-weight:300;">Noe gikk galt: ${e.message}</p>`;
+  }
+  document.getElementById('gen-btn').disabled = false;
+}
+
+render();
+</script>
+</body>
+</html>
